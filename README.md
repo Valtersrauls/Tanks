@@ -1,0 +1,2 @@
+# Tanks
+Mājasdarbs grafiskajā programmēšanā
