@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>threejs - models</title>
+
+	<style>
+		body {
+			margin: 0;
+			overflow: hidden;
+		}
+	</style>
+</head>
+
+<body>
+
+	<canvas id="myCanvas"></canvas>
+
+	<script src="node_modules/three/build/three.js"></script>
+	<script src="node_modules/three/examples/js/loaders/GLTFLoader.js"></script>
+	<script src="OrbitControls.js"></script>
+	<script src="KeyboardState.js"></script>
+	<script>
+		//node_modules/http-server/bin/http-server -a localhost -p 8000
+		var renderer,
+			scene,
+			camera,
+			mixer,
+			action1, action2, action3,
+			myCanvas = document.getElementById('myCanvas');
+
+		var keyboard = new KeyboardState();
+		var clock = new THREE.Clock();
+		//RENDERER
+		renderer = new THREE.WebGLRenderer({
+			canvas: myCanvas,
+			antialias: true
+		});
+		renderer.setClearColor(0x000000);
+		renderer.setPixelRatio(window.devicePixelRatio);
+		renderer.setSize(window.innerWidth, window.innerHeight);
+
+		//CAMERA
+		camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+		camera.position.set(10, 10, 10);
+		controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+		//Resizing
+
+		window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+		//SCENE
+		scene = new THREE.Scene();
+		var geometry = new THREE.CubeGeometry(1000, 1000, 1000);
+		var cubeMaterials =
+			[
+				new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load("mp_normandy/normandy_ft.png"), side: THREE.DoubleSide }),
+				new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load("mp_normandy/normandy_bk.png"), side: THREE.DoubleSide }),
+				new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load("mp_normandy/normandy_up.png"), side: THREE.DoubleSide }),
+				new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load("mp_normandy/normandy_dn.png"), side: THREE.DoubleSide }),
+				new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load("mp_normandy/normandy_rt.png"), side: THREE.DoubleSide }),
+				new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load("mp_normandy/normandy_lf.png"), side: THREE.DoubleSide })
+			];
+
+		var cubeMaterial = new THREE.MeshFaceMaterial(cubeMaterials);
+		var cube = new THREE.Mesh(geometry, cubeMaterial);
+		cube.position.y = 100;
+		scene.add(cube);
+
+		//LIGHTS
+		var light = new THREE.AmbientLight(0xffffff, 1);
+		scene.add(light);
+
+		var light2 = new THREE.PointLight(0xffffff, 1);
+		scene.add(light2);
+
+		var loader = new THREE.GLTFLoader();
+
+		loader.load('tanks.glb', handle_load);
+
+		var tanks;
+
+		function handle_load(gltf) {
+
+			//console.log(gltf);
+			tanks = gltf.scene;
+			//console.log(tanks.children[0]);
+			tanks.body = gltf.scene.children[0];
+			//tanks.material = new THREE.MeshLambetMaterial();
+			//tanks.scale.set(0.5, 0.5, 0.5);
+			mixer = new THREE.AnimationMixer(tanks);
+			var shooting = gltf.animations.find(function (clip) {
+				return clip.name === 'GunShooting';
+			});
+			action1 = mixer.clipAction(shooting);
+			action1.loop = THREE.LoopOnce;
+			//action1.play();
+			var turretRotation = gltf.animations.find(function (clip) {
+				return clip.name === 'TurretShooting';
+			});
+			action2 = mixer.clipAction(turretRotation);
+			action2.loop = THREE.LoopOnce;
+			//action2.play();
+			var Recoil = gltf.animations.find(function (clip) {
+				return clip.name === 'BodyRecoil';
+			});
+			action3 = mixer.clipAction(Recoil);
+			action3.loop = THREE.LoopOnce;
+			//action3.play();
+			scene.add(tanks);
+		}
+
+
+		//RENDER LOOP
+		render();
+
+		var delta = 0;
+		var playAnimation = false;
+		var prevTime = Date.now();
+
+		function render() {
+			keyboard.update();
+			delta += 1;
+			if(keyboard.pressed("space")){
+				if(!playAnimation){
+					playAnimation = true;
+					action1.reset();
+					action2.reset();
+					action3.reset();
+					action1.play();
+					action2.play();
+					action3.play();
+					prevTime = Date.now();
+					console.info("Playanimation == true");
+				}
+			}
+			if (prevTime + 6000 < Date.now()){
+				prevTime = 10000000000000000000000;
+				playAnimation = false;
+				console.info("Playanimation == false");
+			}
+			if(playAnimation){
+				
+				if(tanks) {
+					mixer.update(0.025);
+				}
+			}
+
+			controls.update();
+			
+			renderer.render(scene, camera);
+
+			requestAnimationFrame(render);
+		}
+
+
+	</script>
+</body>
+
+</html>
